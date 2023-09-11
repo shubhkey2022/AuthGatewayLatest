@@ -1,7 +1,6 @@
 package com.service.config;
 
 import java.io.IOException;
-import java.util.Date;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -22,7 +21,7 @@ import com.service.errorHandlers.AuthException;
 @Configuration
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class CorsConfiguration implements Filter {
-	
+
 	@Value("${header.app.name}")
 	private String headerAppName;
 
@@ -42,7 +41,7 @@ public class CorsConfiguration implements Filter {
 
 		HttpServletRequest httpServletRequest = (HttpServletRequest) request;
 		HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-		authenticationProcess(httpServletRequest,httpServletResponse);
+		authenticationProcess(httpServletRequest, httpServletResponse);
 		httpServletResponse.addHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
 		httpServletResponse.addHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
 		httpServletResponse.addHeader("Access-Control-Allow-Headers", ALLOWED_HEADERS);
@@ -55,25 +54,18 @@ public class CorsConfiguration implements Filter {
 			chain.doFilter(httpServletRequest, httpServletResponse);
 		}
 	}
-	
-public void authenticationProcess(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
-		
-	//	final String route = httpServletRequest.getRequestURI();
 
-		final String appName =this.headerAppName;
+	public void authenticationProcess(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
+
+		final String appName = this.headerAppName;
 
 		if (appName == null || appName.isEmpty()) {
 			System.out.println("Application Name not found");
 			throw new AuthException(AuthException.Codes.EA_001);
 		}
 
-//		if (!appName.equals(this.getApplications().get(route.split("/")[1]))) {
-//			throw new AuthException(AuthException.Codes.EA_005);
-//		}
-
 		String newToken = "";
 
-		// AppConfig.removeAll();
 		final String accessToken = AppConfig.getToken(appName);
 		if (null != accessToken && !accessToken.isEmpty()) {
 			System.out.println("Get existing token for --> " + appName);
@@ -82,21 +74,19 @@ public void authenticationProcess(HttpServletRequest httpServletRequest, HttpSer
 			System.out.println("Generate new token for --> " + appName);
 			newToken = jwtUtil.getToken(appName);
 		}
-		
-		final Long exp = jwtUtil.getExpirationDate(newToken);
-		if (exp != 0L && exp > -1) {
-			final Date now = new Date();
-			if (new Date(exp).before(now)) {
-				System.out.println("Token is expired for  --> " + appName);
-				newToken = jwtUtil.getToken(appName);
-				System.out.println("Generate new token for --> " + appName);
-				// throw new AuthException(AuthException.Codes.EA_003);
-			}
-		}
-		if (!jwtUtil.validateDisplayName(newToken, appName)) {
-			throw new AuthException(AuthException.Codes.EA_004);
-		}
-		System.out.println("********* "+newToken);
+
+//		final Long exp = jwtUtil.getExpirationDate(newToken);
+//		if (exp != 0L && exp > -1) {
+//			final Date now = new Date();
+//			if (new Date(exp).before(now)) {
+//				System.out.println("Token is expired for  --> " + appName);
+//				newToken = jwtUtil.getToken(appName);
+//				System.out.println("Generate new token for --> " + appName);
+//				// throw new AuthException(AuthException.Codes.EA_003);
+//			}
+//		}
+
+		System.out.println("********* " + newToken);
 		httpServletResponse.addHeader("AuthorizationToken", newToken);
 	}
 

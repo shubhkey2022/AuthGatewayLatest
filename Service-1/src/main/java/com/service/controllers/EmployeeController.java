@@ -12,6 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
@@ -20,8 +21,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
+import com.service.config.JwtTokenUtil;
 import com.service.constants.AppEntityCodes;
 
 @RestController
@@ -31,13 +34,15 @@ public class EmployeeController {
 	@Autowired
 	private RestTemplate restTemplate;
 
+	@Autowired
+	private JwtTokenUtil jwtUtil;
+
 	public EmployeeController() {
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
 	@GetMapping("{id}")
-	public Map<String, Object> getEmployee(final HttpServletRequest httpServletRequest,HttpServletResponse httpServletResponse,
-			@PathVariable("id") final Long id) {
+	public Map<String, Object> getEmployee(final HttpServletRequest httpServletRequest,
+			HttpServletResponse httpServletResponse, @PathVariable("id") final Long id) {
 
 		Map<String, Object> returnMap = new HashMap<>();
 
@@ -51,19 +56,41 @@ public class EmployeeController {
 
 		// get address from service-2
 		final String url = "http://localhost:8180/api/service-2/employee/address/" + id;
-		final MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
-		String authHeader="";
-		if(httpServletResponse.getHeader("AuthorizationToken") !=  null) {
-			authHeader=httpServletResponse.getHeader("AuthorizationToken");
+		String authHeader = "";
+		String appName = "";
+		if (httpServletResponse.getHeader("AuthorizationToken") != null) {
+			authHeader = httpServletResponse.getHeader("AuthorizationToken");
 		}
-		headers.add("Content-Type", MediaType.APPLICATION_JSON.toString());
-		headers.add("Authorization", "Bearer "+authHeader);
-		final HttpEntity<?> requestEntity = new HttpEntity<>(headers);
-		final ResponseEntity<Map> response = this.restTemplate.exchange(url, HttpMethod.GET, requestEntity, Map.class);
-		final Map<String, Object> address = response.getBody();
+
+		if (httpServletRequest.getHeader("ApplicationName") != null) {
+			appName = httpServletRequest.getHeader("ApplicationName");
+		}
+
+		final Map<String, Object> address = getAddressFromService2(url, authHeader, appName);
 
 		returnMap.put("address", address);
 		return returnMap;
+	}
+
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	private Map<String, Object> getAddressFromService2(final String url, final String authHeader,
+			final String appName) {
+		final MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
+		headers.add("Content-Type", MediaType.APPLICATION_JSON.toString());
+		headers.add("Authorization", "Bearer " + authHeader);
+
+		try {
+			final HttpEntity<?> requestEntity = new HttpEntity<>(headers);
+			final ResponseEntity<Map> response = this.restTemplate.exchange(url, HttpMethod.GET, requestEntity,
+					Map.class);
+			return response.getBody();
+		} catch (HttpStatusCodeException e) {
+			if (e.getStatusCode().equals(HttpStatus.UNAUTHORIZED)) {
+				getAddressFromService2(url, jwtUtil.getToken(appName), appName);
+			}
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	@GetMapping("emp/{id}")
