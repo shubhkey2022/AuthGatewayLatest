@@ -7,9 +7,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import com.api.gateway.constants.Constants;
 import com.api.gateway.constants.Constants.JwtKeys;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,6 +18,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class JwtTokenUtil implements Serializable {
 
 	private static final long serialVersionUID = 6366567108855027683L;
+
+	@Value("${gateway.roles}")
+	private String roles;
 
 	public Long getExpirationDate(final String token) {
 		final Map<String, Object> claims = getClaim(token);
@@ -47,9 +50,12 @@ public class JwtTokenUtil implements Serializable {
 		if (null != claims) {
 			if (null != claims.get(JwtKeys.ROLES)) {
 				final List<String> roles = (ArrayList<String>) claims.get(JwtKeys.ROLES);
-				if ((roles.stream().anyMatch(x -> x.equalsIgnoreCase(Constants.ROLES)))
-						|| (roles.stream().anyMatch(x -> x.equalsIgnoreCase(Constants.ROLES))
-								&& roles.stream().anyMatch(x -> x.equalsIgnoreCase(Constants.ROLES1)))) {
+
+				final String[] role = this.roles.split(",");
+
+				if ((roles.stream().anyMatch(x -> x.equalsIgnoreCase(role[0])))
+						|| (roles.stream().anyMatch(x -> x.equalsIgnoreCase(role[0]))
+								&& roles.stream().anyMatch(x -> x.equalsIgnoreCase(role[1])))) {
 					return true;
 				}
 			}
