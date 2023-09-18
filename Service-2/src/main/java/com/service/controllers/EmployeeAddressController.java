@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
+import com.service.config.AppConfig;
 import com.service.config.JwtTokenUtil;
 import com.service.constants.AppEntityCodes;
 
@@ -73,14 +74,18 @@ public class EmployeeAddressController {
 
 		// get employee from service-1
 		final String url = "http://localhost:8180/api/service-1/employee/emp/" + id;
-		String authHeader = "";
 		String appName = "";
-		if (httpServletResponse.getHeader("AuthorizationToken") != null) {
-			authHeader = httpServletResponse.getHeader("AuthorizationToken");
-		}
-
 		if (httpServletRequest.getHeader("ApplicationName") != null) {
 			appName = httpServletRequest.getHeader("ApplicationName");
+		}
+
+		String authHeader = AppConfig.getToken(appName);
+		if (null != authHeader && !authHeader.isEmpty()) {
+			System.out.println("Get existing token for --> " + appName);
+			authHeader = AppConfig.getToken(appName);
+		} else {
+			System.out.println("Generate new token for --> " + appName);
+			authHeader = jwtUtil.getToken(appName);
 		}
 
 		final Map<String, Object> employee = getEmployeeFromService1(url, authHeader, appName);
